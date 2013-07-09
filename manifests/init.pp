@@ -3,18 +3,29 @@
 # Examples
 #
 #   include dnsmasq
-class dnsmasq {
+class dnsmasq($listen_address = undef, $resolv = true) {
   require homebrew
-  require dnsmasq::config
+  require boxen::config
 
-  file { [$dnsmasq::config::configdir, $dnsmasq::config::logdir]:
+  $configdir  = "${boxen::config::configdir}/dnsmasq"
+  $configfile = "${configdir}/dnsmasq.conf"
+  $datadir    = "${boxen::config::datadir}/dnsmasq"
+  $executable = "${boxen::config::homebrewdir}/sbin/dnsmasq"
+  $logdir     = "${boxen::config::logdir}/dnsmasq"
+  $logfile    = "${logdir}/console.log"
+
+  $bindall    = $listen_address ? {
+    '0.0.0.0' => true,
+    default   => false
+  }
+
+  file { [$configdir, $logdir]:
     ensure => directory
   }
 
-  file { "${dnsmasq::config::configdir}/dnsmasq.conf":
+  file { "${configdir}/dnsmasq.conf":
     notify  => Service['dev.dnsmasq'],
-    require => File[$dnsmasq::config::configdir],
-    source  => 'puppet:///modules/dnsmasq/dnsmasq.conf'
+    content => template('dnsmasq/dnsmasq.conf.erb'),
   }
 
   file { '/Library/LaunchDaemons/dev.dnsmasq.plist':
@@ -30,13 +41,7 @@ class dnsmasq {
     owner  => 'root'
   }
 
-  file { '/etc/resolver/dev':
-    content => 'nameserver 127.0.0.1',
-    group   => 'wheel',
-    owner   => 'root',
-    require => File['/etc/resolver'],
-    notify  => Service['dev.dnsmasq'],
-  }
+  dnsmasq::resolv { 'dev': }
 
   homebrew::formula { 'dnsmasq':
     before => Package['boxen/brews/dnsmasq'],

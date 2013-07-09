@@ -1,0 +1,12 @@
+bind-interfaces
+keep-in-foreground
+
+<% unless resolv %>
+no-resolv
+<% end %>
+
+address=/dev/127.0.0.1
+
+<% unless bindall %>
+listen-address=<%= listen_address %>
+<% end %>
